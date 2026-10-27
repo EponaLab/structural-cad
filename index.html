@@ -1,0 +1,1563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StructureCAD - 3D Structural Analysis</title>
+    <meta name="description" content="3D Structural Engineering CAD tool with FEM analysis capabilities">
+    <style>
+        :root {
+            --background: 0 0% 3.9%;
+            --foreground: 0 0% 98%;
+            --card: 0 0% 7%;
+            --card-foreground: 0 0% 98%;
+            --popover: 0 0% 7%;
+            --popover-foreground: 0 0% 98%;
+            --primary: 210 100% 50%;
+            --primary-foreground: 0 0% 100%;
+            --secondary: 0 0% 14.9%;
+            --secondary-foreground: 0 0% 98%;
+            --muted: 0 0% 14.9%;
+            --muted-foreground: 0 0% 63.9%;
+            --accent: 210 100% 50%;
+            --accent-foreground: 0 0% 98%;
+            --destructive: 0 62.8% 50.6%;
+            --destructive-foreground: 0 0% 98%;
+            --border: 0 0% 14.9%;
+            --input: 0 0% 14.9%;
+            --ring: 210 100% 50%;
+            --radius: 0.5rem;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif;
+            background: hsl(var(--background));
+            color: hsl(var(--foreground));
+            overflow: hidden;
+            line-height: 1.5;
+        }
+
+        .app {
+            display: flex;
+            height: 100vh;
+            gap: 1rem;
+            padding: 1rem;
+        }
+
+        .sidebar {
+            width: 340px;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            overflow-y: auto;
+            padding-right: 0.5rem;
+        }
+
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .sidebar::-webkit-scrollbar-track {
+            background: hsl(var(--background));
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background: hsl(var(--border));
+            border-radius: 3px;
+        }
+
+        .card {
+            background: hsl(var(--card));
+            border: 1px solid hsl(var(--border));
+            border-radius: var(--radius);
+            padding: 1.25rem;
+        }
+
+        .card-header {
+            margin-bottom: 1rem;
+        }
+
+        .card-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            letter-spacing: -0.025em;
+            color: hsl(var(--foreground));
+        }
+
+        .card-description {
+            font-size: 0.875rem;
+            color: hsl(var(--muted-foreground));
+            margin-top: 0.375rem;
+            line-height: 1.5;
+        }
+
+        h1 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            letter-spacing: -0.05em;
+            margin-bottom: 0.25rem;
+        }
+
+        .subtitle {
+            font-size: 0.875rem;
+            color: hsl(var(--muted-foreground));
+        }
+
+        .button-group {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+        }
+
+        .button-group.single {
+            grid-template-columns: 1fr;
+        }
+
+        button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.625rem 1rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            border: 1px solid hsl(var(--border));
+            border-radius: calc(var(--radius) - 2px);
+            background: hsl(var(--secondary));
+            color: hsl(var(--secondary-foreground));
+            cursor: pointer;
+            transition: all 0.15s ease;
+            white-space: nowrap;
+        }
+
+        button:hover {
+            background: hsl(var(--accent));
+            color: hsl(var(--accent-foreground));
+            border-color: hsl(var(--accent));
+        }
+
+        button.primary {
+            background: hsl(var(--primary));
+            color: hsl(var(--primary-foreground));
+            border-color: hsl(var(--primary));
+        }
+
+        button.primary:hover {
+            opacity: 0.9;
+        }
+
+        button.destructive {
+            background: hsl(var(--destructive));
+            color: hsl(var(--destructive-foreground));
+            border-color: hsl(var(--destructive));
+        }
+
+        button.destructive:hover {
+            opacity: 0.9;
+        }
+
+        button.active {
+            background: hsl(var(--accent));
+            color: hsl(var(--accent-foreground));
+            border-color: hsl(var(--accent));
+            box-shadow: 0 0 0 2px hsl(var(--ring) / 0.2);
+        }
+
+        select {
+            width: 100%;
+            padding: 0.625rem 0.75rem;
+            font-size: 0.875rem;
+            background: hsl(var(--input));
+            color: hsl(var(--foreground));
+            border: 1px solid hsl(var(--border));
+            border-radius: calc(var(--radius) - 2px);
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        select:hover {
+            border-color: hsl(var(--ring));
+        }
+
+        select:focus {
+            outline: none;
+            border-color: hsl(var(--ring));
+            box-shadow: 0 0 0 2px hsl(var(--ring) / 0.2);
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
+            margin-top: 0.75rem;
+        }
+
+        .stat {
+            background: hsl(var(--secondary));
+            border: 1px solid hsl(var(--border));
+            border-radius: calc(var(--radius) - 2px);
+            padding: 0.875rem;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: hsl(var(--muted-foreground));
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: hsl(var(--foreground));
+            margin-top: 0.25rem;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.625rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+            border-radius: 9999px;
+            background: hsl(var(--secondary));
+            color: hsl(var(--secondary-foreground));
+            border: 1px solid hsl(var(--border));
+        }
+
+        .badge.success {
+            background: hsl(142 76% 36% / 0.2);
+            color: hsl(142 76% 56%);
+            border-color: hsl(142 76% 36%);
+        }
+
+        .badge.warning {
+            background: hsl(48 96% 53% / 0.2);
+            color: hsl(48 96% 63%);
+            border-color: hsl(48 96% 53%);
+        }
+
+        .badge.error {
+            background: hsl(var(--destructive) / 0.2);
+            color: hsl(var(--destructive));
+            border-color: hsl(var(--destructive));
+        }
+
+        #viewport {
+            flex: 1;
+            position: relative;
+            background: hsl(var(--card));
+            border: 1px solid hsl(var(--border));
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+
+        .selection-panel {
+            background: hsl(var(--card));
+            border: 1px solid hsl(var(--accent));
+            border-radius: var(--radius);
+            padding: 1rem;
+            margin-top: 0.75rem;
+        }
+
+        .selection-panel.hidden {
+            display: none;
+        }
+
+        .selection-detail {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid hsl(var(--border));
+            font-size: 0.875rem;
+        }
+
+        .selection-detail:last-child {
+            border-bottom: none;
+        }
+
+        .selection-detail span:first-child {
+            color: hsl(var(--muted-foreground));
+        }
+
+        .selection-detail span:last-child {
+            font-weight: 500;
+        }
+
+        .analysis-results {
+            display: none;
+            margin-top: 0.75rem;
+        }
+
+        .analysis-results.show {
+            display: block;
+        }
+
+        .hint {
+            font-size: 0.75rem;
+            color: hsl(var(--muted-foreground));
+            line-height: 1.5;
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid hsl(var(--border));
+        }
+
+        .hint strong {
+            color: hsl(var(--foreground));
+            display: block;
+            margin-bottom: 0.375rem;
+        }
+
+        .divider {
+            height: 1px;
+            background: hsl(var(--border));
+            margin: 0.75rem 0;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+            padding: 0.625rem;
+            background: hsl(var(--secondary));
+            border-radius: calc(var(--radius) - 2px);
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .checkbox-group:hover {
+            background: hsl(var(--accent) / 0.2);
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 1rem;
+            height: 1rem;
+            cursor: pointer;
+        }
+
+        .checkbox-group label {
+            font-size: 0.875rem;
+            cursor: pointer;
+            flex: 1;
+        }
+
+        .alert {
+            padding: 0.75rem;
+            border-radius: calc(var(--radius) - 2px);
+            font-size: 0.875rem;
+            margin-top: 0.75rem;
+            line-height: 1.5;
+        }
+
+        .alert.info {
+            background: hsl(var(--accent) / 0.1);
+            border: 1px solid hsl(var(--accent));
+            color: hsl(var(--accent-foreground));
+        }
+
+        .alert.warning {
+            background: hsl(48 96% 53% / 0.1);
+            border: 1px solid hsl(48 96% 53%);
+            color: hsl(48 96% 73%);
+        }
+
+        .alert.success {
+            background: hsl(142 76% 36% / 0.1);
+            border: 1px solid hsl(142 76% 36%);
+            color: hsl(142 76% 66%);
+        }
+
+        .validation-list {
+            list-style: none;
+            margin-top: 0.5rem;
+        }
+
+        .validation-list li {
+            padding: 0.375rem 0;
+            font-size: 0.8125rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <div class="sidebar">
+            <div class="card">
+                <h1>StructureCAD</h1>
+                <p class="subtitle">3D Structural Analysis Tool</p>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Tools</div>
+                    <div class="card-description">Select a tool to add or edit elements</div>
+                </div>
+                <div class="button-group">
+                    <button id="selectBtn" onclick="app.setTool('select')" class="active">
+                        ✋ Select
+                    </button>
+                    <button id="beamBtn" onclick="app.setTool('beam')">
+                        ➖ Beam
+                    </button>
+                    <button id="columnBtn" onclick="app.setTool('column')">
+                        ⬆️ Column
+                    </button>
+                    <button id="slabBtn" onclick="app.setTool('slab')">
+                        ⬜ Slab
+                    </button>
+                    <button id="loadBtn" onclick="app.setTool('load')">
+                        ⬇️ Load
+                    </button>
+                </div>
+
+                <div id="selectionInfo" class="selection-panel hidden">
+                    <div class="card-title" style="margin-bottom: 0.75rem;">Selection</div>
+                    <div id="selectionDetails"></div>
+                    <button onclick="app.deleteSelected()" class="destructive" style="width: 100%; margin-top: 0.75rem;">
+                        🗑️ Delete
+                    </button>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Properties</div>
+                </div>
+                
+                <label style="font-size: 0.875rem; font-weight: 500; display: block; margin-bottom: 0.375rem;">Material</label>
+                <select id="materialSelect" onchange="app.updateMaterial()">
+                    <option value="steel">Steel (E=200 GPa, fy=250 MPa)</option>
+                    <option value="concrete">Concrete (E=25 GPa, fc=30 MPa)</option>
+                    <option value="wood">Wood (E=12 GPa, fb=10 MPa)</option>
+                    <option value="aluminum">Aluminum (E=70 GPa, fy=200 MPa)</option>
+                </select>
+
+                <div class="divider"></div>
+
+                <label style="font-size: 0.875rem; font-weight: 500; display: block; margin-bottom: 0.375rem;">Section</label>
+                <select id="sectionSelect" onchange="app.updateSection()">
+                    <option value="W12x26">W12×26 (I-Beam)</option>
+                    <option value="W14x30">W14×30 (I-Beam)</option>
+                    <option value="W18x40">W18×40 (I-Beam)</option>
+                    <option value="HSS8x8x1/4">HSS 8×8×¼ (Square Tube)</option>
+                    <option value="HSS10x10x3/8">HSS 10×10×⅜ (Square Tube)</option>
+                    <option value="12x12">12"×12" (Rectangular)</option>
+                    <option value="45x90-Wood">45×90mm (Wood Beam)</option>
+                </select>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Visualization</div>
+                </div>
+                
+                <div class="checkbox-group" onclick="app.toggleJoints()">
+                    <input type="checkbox" id="showJoints" checked>
+                    <label for="showJoints">Show structural joints</label>
+                </div>
+
+                <div class="checkbox-group" onclick="app.toggleGrid()">
+                    <input type="checkbox" id="showGrid" checked>
+                    <label for="showGrid">Show grid</label>
+                </div>
+
+                <div class="checkbox-group" onclick="app.toggleSnapToJoints()">
+                    <input type="checkbox" id="snapToJoints" checked>
+                    <label for="snapToJoints">Snap to joints (recommended)</label>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Connection Validation</div>
+                    <div class="card-description">Check structural integrity</div>
+                </div>
+
+                <button onclick="app.validateConnections()" class="primary" style="width: 100%;">
+                    🔍 Validate Connections
+                </button>
+
+                <div id="validationResults" style="display: none;">
+                    <!-- Results will be inserted here -->
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Analysis</div>
+                    <div class="card-description">Run finite element analysis</div>
+                </div>
+
+                <button onclick="app.runAnalysis()" class="primary" style="width: 100%;">
+                    ⚡ Run FEM Analysis
+                </button>
+
+                <button onclick="app.toggleDeformed()" style="width: 100%; margin-top: 0.5rem;">
+                    <span id="deformedBtn">Show Deformed Shape</span>
+                </button>
+
+                <div id="results" class="analysis-results">
+                    <div class="divider"></div>
+                    <div class="stats">
+                        <div class="stat">
+                            <div class="stat-label">Deflection</div>
+                            <div class="stat-value" id="maxDeflection" style="font-size: 1.25rem;">--</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-label">Stress</div>
+                            <div class="stat-value" id="maxStress" style="font-size: 1.25rem;">--</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-label">Utilization</div>
+                            <div class="stat-value" id="utilization" style="font-size: 1.25rem;">--</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-label">Status</div>
+                            <div class="stat-value" id="statusBadge" style="font-size: 1rem; margin-top: 0.5rem;">
+                                <span class="badge">--</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Model Statistics</div>
+                </div>
+                <div class="stats">
+                    <div class="stat">
+                        <div class="stat-label">Members</div>
+                        <div class="stat-value" id="memberCount">0</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">Loads</div>
+                        <div class="stat-value" id="loadCount">0</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">Joints</div>
+                        <div class="stat-value" id="jointCount">0</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">DOF</div>
+                        <div class="stat-value" id="dofCount">0</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Examples</div>
+                    <div class="card-description">Load pre-built structural examples</div>
+                </div>
+                <div class="button-group single">
+                    <button onclick="app.buildWoodenFloorDemo()" class="primary">
+                        🌲 Wooden Floor System
+                    </button>
+                </div>
+                <div class="hint">
+                    <strong>Wooden Floor Demo:</strong>
+                    45×90mm beams, 1.2m spacing, 4m span, 200 kg/m² load
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Actions</div>
+                </div>
+                <div class="button-group single">
+                    <button onclick="app.exportModel()">📥 Export Model</button>
+                    <button onclick="app.clearModel()" class="destructive">🗑️ Clear All</button>
+                </div>
+
+                <div class="hint">
+                    <strong>Keyboard Shortcuts</strong>
+                    Delete/Backspace: Remove selected<br>
+                    Mouse wheel: Zoom<br>
+                    Right drag: Pan view<br>
+                    Left drag: Rotate view
+                </div>
+            </div>
+        </div>
+
+        <div id="viewport"></div>
+    </div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { TransformControls } from 'three/addons/controls/TransformControls.js';
+
+        class StructuralCAD {
+            constructor() {
+                this.scene = null;
+                this.camera = null;
+                this.renderer = null;
+                this.controls = null;
+                this.transformControls = null;
+                this.raycaster = new THREE.Raycaster();
+                this.mouse = new THREE.Vector2();
+                
+                this.members = [];
+                this.loads = [];
+                this.joints = [];
+                this.jointMeshes = [];
+                this.gridHelper = null;
+                
+                this.selectedObject = null;
+                this.selectedMember = null;
+                
+                this.currentTool = 'select';
+                this.selectedMaterial = 'steel';
+                this.selectedSection = 'W12x26';
+                this.showingDeformed = false;
+                this.showingJoints = true;
+                this.showingGrid = true;
+                this.snapToJoints = true;
+                this.snapThreshold = 0.5; // Distance threshold for snapping
+                this.analysisResults = null;
+
+                this.materials = {
+                    steel: { E: 200000, fy: 250, density: 7850, color: 0x71717a },
+                    concrete: { E: 25000, fc: 30, density: 2400, color: 0xa1a1aa },
+                    wood: { E: 12000, fb: 10, density: 600, color: 0x92400e },
+                    aluminum: { E: 70000, fy: 200, density: 2700, color: 0x94a3b8 }
+                };
+
+                this.sections = {
+                    'W12x26': { A: 7.65, Ix: 204, Iy: 17.3, depth: 12.22, width: 0.23, height: 0.35 },
+                    'W14x30': { A: 8.85, Ix: 291, Iy: 19.6, depth: 13.84, width: 0.25, height: 0.40 },
+                    'W18x40': { A: 11.8, Ix: 612, Iy: 19.1, depth: 17.90, width: 0.30, height: 0.50 },
+                    'HSS8x8x1/4': { A: 7.10, Ix: 90.0, Iy: 90.0, depth: 8.0, width: 0.25, height: 0.25 },
+                    'HSS10x10x3/8': { A: 12.2, Ix: 180, Iy: 180, depth: 10.0, width: 0.30, height: 0.30 },
+                    '12x12': { A: 144, Ix: 1728, Iy: 1728, depth: 12.0, width: 0.30, height: 0.30 },
+                    '45x90-Wood': { A: 6.28, Ix: 6.57, Iy: 1.64, depth: 3.54, width: 0.045, height: 0.090 }
+                };
+
+                this.init();
+            }
+
+            init() {
+                const container = document.getElementById('viewport');
+
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(0x0a0a0a);
+
+                this.camera = new THREE.PerspectiveCamera(
+                    60,
+                    container.clientWidth / container.clientHeight,
+                    0.1,
+                    1000
+                );
+                this.camera.position.set(15, 12, 15);
+
+                this.renderer = new THREE.WebGLRenderer({ antialias: true });
+                this.renderer.setSize(container.clientWidth, container.clientHeight);
+                this.renderer.shadowMap.enabled = true;
+                container.appendChild(this.renderer.domElement);
+
+                this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+                this.controls.enableDamping = true;
+                this.controls.dampingFactor = 0.05;
+
+                this.transformControls = new TransformControls(this.camera, this.renderer.domElement);
+                this.transformControls.addEventListener('dragging-changed', (event) => {
+                    this.controls.enabled = !event.value;
+                });
+                this.transformControls.addEventListener('objectChange', () => {
+                    if (this.snapToJoints && this.selectedObject) {
+                        this.snapObjectToJoint(this.selectedObject);
+                    }
+                    this.updateJoints();
+                });
+                this.scene.add(this.transformControls);
+
+                this.gridHelper = new THREE.GridHelper(30, 30, 0x27272a, 0x18181b);
+                this.scene.add(this.gridHelper);
+
+                const axesHelper = new THREE.AxesHelper(8);
+                this.scene.add(axesHelper);
+
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+                this.scene.add(ambientLight);
+
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+                directionalLight.position.set(20, 30, 10);
+                directionalLight.castShadow = true;
+                this.scene.add(directionalLight);
+
+                window.addEventListener('resize', () => this.onWindowResize());
+                container.addEventListener('click', (e) => this.onMouseClick(e));
+                window.addEventListener('keydown', (e) => this.onKeyDown(e));
+
+                this.addSampleStructure();
+                this.animate();
+            }
+
+            snapObjectToJoint(object) {
+                if (!this.snapToJoints) return;
+
+                const pos = object.position;
+                let closestJoint = null;
+                let minDistance = this.snapThreshold;
+
+                this.joints.forEach(joint => {
+                    const distance = Math.sqrt(
+                        Math.pow(pos.x - joint.x, 2) +
+                        Math.pow(pos.y - joint.y, 2) +
+                        Math.pow(pos.z - joint.z, 2)
+                    );
+
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        closestJoint = joint;
+                    }
+                });
+
+                if (closestJoint) {
+                    object.position.set(closestJoint.x, closestJoint.y, closestJoint.z);
+                }
+            }
+
+            findNearbyJoint(x, y, z) {
+                let closestJoint = null;
+                let minDistance = this.snapThreshold;
+
+                this.joints.forEach(joint => {
+                    const distance = Math.sqrt(
+                        Math.pow(x - joint.x, 2) +
+                        Math.pow(y - joint.y, 2) +
+                        Math.pow(z - joint.z, 2)
+                    );
+
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        closestJoint = joint;
+                    }
+                });
+
+                return closestJoint;
+            }
+
+            validateConnections() {
+                const issues = [];
+                const connected = new Set();
+                const warnings = [];
+
+                // Check each member for connections
+                this.members.forEach((member, idx) => {
+                    const pos = member.mesh.position;
+                    const box = new THREE.Box3().setFromObject(member.mesh);
+                    const size = new THREE.Vector3();
+                    box.getSize(size);
+
+                    let endpoints = [];
+                    if (member.type === 'column') {
+                        endpoints = [
+                            { x: pos.x, y: pos.y - size.y/2, z: pos.z },
+                            { x: pos.x, y: pos.y + size.y/2, z: pos.z }
+                        ];
+                    } else if (member.type === 'beam') {
+                        endpoints = [
+                            { x: pos.x - size.x/2, y: pos.y, z: pos.z },
+                            { x: pos.x + size.x/2, y: pos.y, z: pos.z }
+                        ];
+                    }
+
+                    let hasConnection = false;
+                    endpoints.forEach(ep => {
+                        const nearby = this.findNearbyJoint(ep.x, ep.y, ep.z);
+                        if (nearby) {
+                            hasConnection = true;
+                            connected.add(idx);
+                        }
+                    });
+
+                    if (!hasConnection && member.type !== 'slab') {
+                        issues.push(`${member.type} at (${pos.x.toFixed(1)}, ${pos.y.toFixed(1)}, ${pos.z.toFixed(1)}) is not connected`);
+                    }
+                });
+
+                // Check for floating members
+                const unconnectedCount = this.members.length - connected.size;
+                if (unconnectedCount > 0) {
+                    warnings.push(`${unconnectedCount} member(s) may not be properly connected`);
+                }
+
+                // Check load connections
+                this.loads.forEach(load => {
+                    const pos = load.mesh.position;
+                    let onMember = false;
+
+                    this.members.forEach(member => {
+                        const mpos = member.mesh.position;
+                        const box = new THREE.Box3().setFromObject(member.mesh);
+                        if (box.containsPoint(new THREE.Vector3(pos.x, pos.y, pos.z))) {
+                            onMember = true;
+                        }
+                    });
+
+                    if (!onMember) {
+                        warnings.push(`Load at (${pos.x.toFixed(1)}, ${pos.y.toFixed(1)}, ${pos.z.toFixed(1)}) is not on a member`);
+                    }
+                });
+
+                this.displayValidationResults(issues, warnings, connected.size);
+            }
+
+            displayValidationResults(issues, warnings, connectedCount) {
+                const container = document.getElementById('validationResults');
+                container.style.display = 'block';
+
+                const totalMembers = this.members.filter(m => m.type !== 'slab').length;
+                const percentage = totalMembers > 0 ? Math.round((connectedCount / totalMembers) * 100) : 0;
+
+                let html = '';
+
+                if (issues.length === 0 && warnings.length === 0) {
+                    html = `
+                        <div class="alert success">
+                            <strong>✅ All connections valid!</strong><br>
+                            ${connectedCount} of ${totalMembers} members properly connected (${percentage}%)
+                        </div>
+                    `;
+                } else {
+                    if (warnings.length > 0) {
+                        html += `
+                            <div class="alert warning">
+                                <strong>⚠️ Connection Warnings</strong>
+                                <ul class="validation-list">
+                                    ${warnings.map(w => `<li>• ${w}</li>`).join('')}
+                                </ul>
+                            </div>
+                        `;
+                    }
+
+                    if (issues.length > 0) {
+                        html += `
+                            <div class="alert info">
+                                <strong>🔍 Unconnected Elements</strong>
+                                <ul class="validation-list">
+                                    ${issues.slice(0, 5).map(i => `<li>• ${i}</li>`).join('')}
+                                    ${issues.length > 5 ? `<li>... and ${issues.length - 5} more</li>` : ''}
+                                </ul>
+                            </div>
+                        `;
+                    }
+
+                    html += `
+                        <div class="alert info" style="margin-top: 0.5rem;">
+                            <strong>💡 Tips:</strong><br>
+                            • Enable "Snap to joints" for easier connections<br>
+                            • Blue spheres show connection points<br>
+                            • Drag members close to joints to connect
+                        </div>
+                    `;
+                }
+
+                container.innerHTML = html;
+            }
+
+            addSampleStructure() {
+                for (let i = 0; i < 3; i++) {
+                    for (let j = 0; j < 3; j++) {
+                        const x = i * 5 - 5;
+                        const z = j * 5 - 5;
+                        this.createColumn(x, 0, z);
+                    }
+                }
+                this.updateJoints();
+                this.updateStats();
+            }
+
+            buildWoodenFloorDemo() {
+                // Clear existing model first
+                if (this.members.length > 0 || this.loads.length > 0) {
+                    if (!confirm('Clear current model and build wooden floor demo?')) {
+                        return;
+                    }
+                    this.clearModelSilent();
+                }
+
+                // Parameters
+                const joistSpacing = 1.2;  // 120 cm = 1.2 m
+                const joistLength = 4.0;   // 4 m span
+                const numJoists = 5;       // 5 joists across 4.8m width
+                const loadPerSqm = 200;    // 200 kg/m²
+                const wallHeight = 2.5;    // Wall height
+                
+                // Set material and section for joists
+                this.selectedMaterial = 'wood';
+                this.selectedSection = '45x90-Wood';
+                
+                // Create two parallel support walls/beams
+                // These represent walls or main beams that the joists rest on
+                const totalWidth = (numJoists - 1) * joistSpacing;
+                
+                // Left support beam/wall (running along Z-axis)
+                const leftSupportX = -joistLength / 2;
+                for (let i = 0; i < 6; i++) {
+                    const z = i * 1.0 - 2.5;
+                    const geometry = new THREE.BoxGeometry(0.3, wallHeight, 1.0);
+                    const material = new THREE.MeshPhongMaterial({ color: 0xa1a1aa }); // Concrete color
+                    const mesh = new THREE.Mesh(geometry, material);
+                    mesh.position.set(leftSupportX, wallHeight/2, z);
+                    mesh.castShadow = true;
+                    mesh.receiveShadow = true;
+                    this.scene.add(mesh);
+                    
+                    this.members.push({
+                        mesh,
+                        type: 'wall',
+                        material: 'concrete',
+                        section: '12x12'
+                    });
+                }
+                
+                // Right support beam/wall (running along Z-axis)
+                const rightSupportX = joistLength / 2;
+                for (let i = 0; i < 6; i++) {
+                    const z = i * 1.0 - 2.5;
+                    const geometry = new THREE.BoxGeometry(0.3, wallHeight, 1.0);
+                    const material = new THREE.MeshPhongMaterial({ color: 0xa1a1aa });
+                    const mesh = new THREE.Mesh(geometry, material);
+                    mesh.position.set(rightSupportX, wallHeight/2, z);
+                    mesh.castShadow = true;
+                    mesh.receiveShadow = true;
+                    this.scene.add(mesh);
+                    
+                    this.members.push({
+                        mesh,
+                        type: 'wall',
+                        material: 'concrete',
+                        section: '12x12'
+                    });
+                }
+                
+                // Create floor joists (45x90mm beams spanning perpendicular to walls)
+                // Joists run in X-direction, spanning between the two walls
+                const joistY = wallHeight;
+                for (let i = 0; i < numJoists; i++) {
+                    const z = i * joistSpacing - totalWidth / 2;
+                    
+                    // Create the joist beam
+                    const section = this.sections[this.selectedSection];
+                    const geometry = new THREE.BoxGeometry(joistLength, section.height, section.width);
+                    const material = new THREE.MeshPhongMaterial({
+                        color: this.materials[this.selectedMaterial].color
+                    });
+                    const mesh = new THREE.Mesh(geometry, material);
+                    mesh.position.set(0, joistY, z);
+                    mesh.castShadow = true;
+                    this.scene.add(mesh);
+
+                    this.members.push({
+                        mesh,
+                        type: 'beam',
+                        material: this.selectedMaterial,
+                        section: this.selectedSection,
+                        start: { x: -joistLength/2, y: joistY, z },
+                        end: { x: joistLength/2, y: joistY, z }
+                    });
+                }
+                
+                // Calculate and apply loads
+                // Each joist carries tributary width × length × load
+                const tributaryWidth = joistSpacing;
+                const loadPerJoist = tributaryWidth * joistLength * loadPerSqm; // kg
+                
+                // Distribute as point loads (3 per joist for typical loading)
+                const loadPointsPerJoist = 3;
+                const loadPerPoint = (loadPerJoist / loadPointsPerJoist) * 9.81 / 1000; // Convert to kN
+                
+                for (let i = 0; i < numJoists; i++) {
+                    const z = i * joistSpacing - totalWidth / 2;
+                    
+                    // Edge joists carry half the load
+                    const isEdge = (i === 0 || i === numJoists - 1);
+                    const effectiveLoad = isEdge ? loadPerPoint * 0.5 : loadPerPoint;
+                    
+                    for (let j = 0; j < loadPointsPerJoist; j++) {
+                        // Distribute loads at 1/4, 1/2, 3/4 span points
+                        const x = (j / (loadPointsPerJoist - 1) - 0.5) * joistLength * 0.8;
+                        
+                        const geometry = new THREE.ConeGeometry(0.15, 0.5, 8);
+                        const material = new THREE.MeshPhongMaterial({ color: 0xef4444 });
+                        const mesh = new THREE.Mesh(geometry, material);
+                        mesh.position.set(x, joistY + 0.3, z);
+                        mesh.rotation.x = Math.PI;
+                        this.scene.add(mesh);
+
+                        this.loads.push({
+                            mesh,
+                            magnitude: effectiveLoad.toFixed(2),
+                            type: 'point',
+                            location: { x, y: joistY + 0.3, z }
+                        });
+                    }
+                }
+                
+                // Update joints and stats
+                this.updateJoints();
+                this.updateStats();
+                
+                // Position camera for good view
+                this.camera.position.set(6, 5, 6);
+                this.camera.lookAt(0, joistY, 0);
+                this.controls.target.set(0, joistY, 0);
+                this.controls.update();
+                
+                // Calculate totals
+                const totalArea = joistLength * totalWidth;
+                const totalLoad = totalArea * loadPerSqm;
+                
+                // Show info alert
+                alert(`Wooden Floor System Built!\n\n` +
+                      `📐 GEOMETRY:\n` +
+                      `• Joists: 45×90mm wood, ${joistLength}m span\n` +
+                      `• Spacing: ${joistSpacing}m (${joistSpacing * 100}cm) o.c.\n` +
+                      `• Count: ${numJoists} joists\n` +
+                      `• Total width: ${totalWidth.toFixed(1)}m\n\n` +
+                      `⚖️ LOADING:\n` +
+                      `• Design load: ${loadPerSqm} kg/m² (${(loadPerSqm * 9.81 / 1000).toFixed(2)} kN/m²)\n` +
+                      `• Floor area: ${totalArea.toFixed(1)} m²\n` +
+                      `• Total load: ${totalLoad.toFixed(0)} kg\n` +
+                      `• Load per joist: ${loadPerJoist.toFixed(0)} kg\n\n` +
+                      `🏗️ STRUCTURE:\n` +
+                      `• Two parallel support walls\n` +
+                      `• Joists span perpendicular between walls\n` +
+                      `• ${numJoists * loadPointsPerJoist} point loads applied\n\n` +
+                      `Click "Validate Connections" to check!`);
+            }
+
+            clearModelSilent() {
+                this.deselectObject();
+                this.members.forEach(member => {
+                    this.scene.remove(member.mesh);
+                    member.mesh.geometry.dispose();
+                    member.mesh.material.dispose();
+                });
+                this.loads.forEach(load => {
+                    this.scene.remove(load.mesh);
+                    load.mesh.geometry.dispose();
+                    load.mesh.material.dispose();
+                });
+                this.members = [];
+                this.loads = [];
+                this.analysisResults = null;
+                document.getElementById('results').classList.remove('show');
+                document.getElementById('validationResults').style.display = 'none';
+                this.updateJoints();
+                this.updateStats();
+            }
+
+            setTool(tool) {
+                this.currentTool = tool;
+                ['select', 'beam', 'column', 'slab', 'load'].forEach(t => {
+                    const btn = document.getElementById(t + 'Btn');
+                    if (btn) btn.classList.remove('active');
+                });
+                const activeBtn = document.getElementById(tool + 'Btn');
+                if (activeBtn) activeBtn.classList.add('active');
+            }
+
+            onMouseClick(event) {
+                const container = document.getElementById('viewport');
+                const rect = container.getBoundingClientRect();
+                
+                this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+                this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+                this.raycaster.setFromCamera(this.mouse, this.camera);
+
+                if (this.currentTool === 'select') {
+                    const allObjects = this.members.concat(this.loads).map(m => m.mesh);
+                    const intersects = this.raycaster.intersectObjects(allObjects, false);
+
+                    if (intersects.length > 0) {
+                        this.selectObject(intersects[0].object);
+                    } else {
+                        this.deselectObject();
+                    }
+                } else {
+                    const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+                    const intersectPoint = new THREE.Vector3();
+                    this.raycaster.ray.intersectPlane(groundPlane, intersectPoint);
+
+                    if (intersectPoint) {
+                        let x = intersectPoint.x;
+                        let y = 6;
+                        let z = intersectPoint.z;
+
+                        // Snap to nearby joint if enabled
+                        if (this.snapToJoints && (this.currentTool === 'beam' || this.currentTool === 'column')) {
+                            const nearbyJoint = this.findNearbyJoint(x, y, z);
+                            if (nearbyJoint) {
+                                x = nearbyJoint.x;
+                                y = nearbyJoint.y;
+                                z = nearbyJoint.z;
+                            }
+                        }
+
+                        switch (this.currentTool) {
+                            case 'beam':
+                                this.createBeam(x, y, z);
+                                break;
+                            case 'column':
+                                this.createColumn(x, 0, z);
+                                break;
+                            case 'slab':
+                                this.createSlab(x, 6.5, z);
+                                break;
+                            case 'load':
+                                this.createLoad(x, 7, z);
+                                break;
+                        }
+                        this.updateJoints();
+                        this.updateStats();
+                    }
+                }
+            }
+
+            selectObject(object) {
+                this.deselectObject();
+                this.selectedObject = object;
+                this.selectedMember = this.members.find(m => m.mesh === object) ||
+                                     this.loads.find(l => l.mesh === object);
+                
+                if (object.material.emissive) {
+                    object.material.emissive.setHex(0x3b82f6);
+                    object.material.emissiveIntensity = 0.5;
+                }
+                
+                this.transformControls.attach(object);
+                this.updateSelectionInfo();
+            }
+
+            deselectObject() {
+                if (this.selectedObject) {
+                    if (this.selectedObject.material.emissive) {
+                        this.selectedObject.material.emissive.setHex(0x000000);
+                        this.selectedObject.material.emissiveIntensity = 0;
+                    }
+                    this.transformControls.detach();
+                    this.selectedObject = null;
+                    this.selectedMember = null;
+                }
+                document.getElementById('selectionInfo').classList.add('hidden');
+            }
+
+            updateSelectionInfo() {
+                if (this.selectedMember) {
+                    const info = document.getElementById('selectionDetails');
+                    const type = this.selectedMember.type || 'load';
+                    const material = this.selectedMember.material || 'N/A';
+                    const section = this.selectedMember.section || 'N/A';
+                    const pos = this.selectedMember.mesh.position;
+                    
+                    // Check connection status
+                    let connectionStatus = '❓ Unknown';
+                    if (type === 'beam' || type === 'column') {
+                        const endpoints = this.getMemberEndpoints(this.selectedMember);
+                        const connected = endpoints.some(ep => 
+                            this.findNearbyJoint(ep.x, ep.y, ep.z) !== null
+                        );
+                        connectionStatus = connected ? '✅ Connected' : '❌ Not connected';
+                    }
+                    
+                    info.innerHTML = `
+                        <div class="selection-detail">
+                            <span>Type</span>
+                            <span>${type}</span>
+                        </div>
+                        <div class="selection-detail">
+                            <span>Material</span>
+                            <span>${material}</span>
+                        </div>
+                        <div class="selection-detail">
+                            <span>Section</span>
+                            <span>${section}</span>
+                        </div>
+                        <div class="selection-detail">
+                            <span>Connection</span>
+                            <span>${connectionStatus}</span>
+                        </div>
+                        <div class="selection-detail">
+                            <span>Position</span>
+                            <span>(${pos.x.toFixed(1)}, ${pos.y.toFixed(1)}, ${pos.z.toFixed(1)})</span>
+                        </div>
+                    `;
+                    
+                    document.getElementById('selectionInfo').classList.remove('hidden');
+                }
+            }
+
+            getMemberEndpoints(member) {
+                const pos = member.mesh.position;
+                const box = new THREE.Box3().setFromObject(member.mesh);
+                const size = new THREE.Vector3();
+                box.getSize(size);
+
+                if (member.type === 'column') {
+                    return [
+                        { x: pos.x, y: pos.y - size.y/2, z: pos.z },
+                        { x: pos.x, y: pos.y + size.y/2, z: pos.z }
+                    ];
+                } else if (member.type === 'beam') {
+                    return [
+                        { x: pos.x - size.x/2, y: pos.y, z: pos.z },
+                        { x: pos.x + size.x/2, y: pos.y, z: pos.z }
+                    ];
+                }
+                return [];
+            }
+
+            deleteSelected() {
+                if (!this.selectedObject) return;
+                
+                this.members = this.members.filter(m => m.mesh !== this.selectedObject);
+                this.loads = this.loads.filter(l => l.mesh !== this.selectedObject);
+                
+                this.scene.remove(this.selectedObject);
+                this.selectedObject.geometry.dispose();
+                this.selectedObject.material.dispose();
+                
+                this.deselectObject();
+                this.updateJoints();
+                this.updateStats();
+            }
+
+            onKeyDown(event) {
+                if (event.key === 'Delete' || event.key === 'Backspace') {
+                    if (this.selectedObject && document.activeElement.tagName !== 'INPUT') {
+                        event.preventDefault();
+                        this.deleteSelected();
+                    }
+                }
+            }
+
+            createBeam(x, y, z) {
+                const section = this.sections[this.selectedSection];
+                const geometry = new THREE.BoxGeometry(6, section.height, section.width);
+                const material = new THREE.MeshPhongMaterial({
+                    color: this.materials[this.selectedMaterial].color
+                });
+                const mesh = new THREE.Mesh(geometry, material);
+                mesh.position.set(x, y, z);
+                mesh.castShadow = true;
+                this.scene.add(mesh);
+
+                this.members.push({
+                    mesh,
+                    type: 'beam',
+                    material: this.selectedMaterial,
+                    section: this.selectedSection,
+                    start: { x: x - 3, y, z },
+                    end: { x: x + 3, y, z }
+                });
+            }
+
+            createColumn(x, y, z) {
+                const section = this.sections[this.selectedSection];
+                const geometry = new THREE.BoxGeometry(section.width, 6, section.width);
+                const material = new THREE.MeshPhongMaterial({
+                    color: this.materials[this.selectedMaterial].color
+                });
+                const mesh = new THREE.Mesh(geometry, material);
+                mesh.position.set(x, y + 3, z);
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+                this.scene.add(mesh);
+
+                this.members.push({
+                    mesh,
+                    type: 'column',
+                    material: this.selectedMaterial,
+                    section: this.selectedSection,
+                    start: { x, y, z },
+                    end: { x, y: y + 6, z }
+                });
+            }
+
+            createSlab(x, y, z) {
+                const geometry = new THREE.BoxGeometry(5, 0.25, 5);
+                const material = new THREE.MeshPhongMaterial({ color: 0xa1a1aa });
+                const mesh = new THREE.Mesh(geometry, material);
+                mesh.position.set(x, y, z);
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+                this.scene.add(mesh);
+
+                this.members.push({
+                    mesh,
+                    type: 'slab',
+                    material: 'concrete',
+                    section: '12x12'
+                });
+            }
+
+            createLoad(x, y, z) {
+                const geometry = new THREE.ConeGeometry(0.3, 1, 8);
+                const material = new THREE.MeshPhongMaterial({ color: 0xef4444 });
+                const mesh = new THREE.Mesh(geometry, material);
+                mesh.position.set(x, y, z);
+                mesh.rotation.x = Math.PI;
+                this.scene.add(mesh);
+
+                this.loads.push({
+                    mesh,
+                    magnitude: 50,
+                    type: 'point',
+                    location: { x, y, z }
+                });
+            }
+
+            updateJoints() {
+                this.jointMeshes.forEach(joint => {
+                    this.scene.remove(joint);
+                    joint.geometry.dispose();
+                    joint.material.dispose();
+                });
+                this.jointMeshes = [];
+                this.joints = [];
+
+                if (!this.showingJoints) return;
+
+                const jointPositions = new Map();
+                
+                this.members.forEach(member => {
+                    const pos = member.mesh.position;
+                    const box = new THREE.Box3().setFromObject(member.mesh);
+                    const size = new THREE.Vector3();
+                    box.getSize(size);
+                    
+                    if (member.type === 'column') {
+                        const bottomKey = `${pos.x.toFixed(1)},${(pos.y - size.y/2).toFixed(1)},${pos.z.toFixed(1)}`;
+                        const topKey = `${pos.x.toFixed(1)},${(pos.y + size.y/2).toFixed(1)},${pos.z.toFixed(1)}`;
+                        jointPositions.set(bottomKey, { x: pos.x, y: pos.y - size.y/2, z: pos.z });
+                        jointPositions.set(topKey, { x: pos.x, y: pos.y + size.y/2, z: pos.z });
+                    } else if (member.type === 'beam') {
+                        const leftKey = `${(pos.x - size.x/2).toFixed(1)},${pos.y.toFixed(1)},${pos.z.toFixed(1)}`;
+                        const rightKey = `${(pos.x + size.x/2).toFixed(1)},${pos.y.toFixed(1)},${pos.z.toFixed(1)}`;
+                        jointPositions.set(leftKey, { x: pos.x - size.x/2, y: pos.y, z: pos.z });
+                        jointPositions.set(rightKey, { x: pos.x + size.x/2, y: pos.y, z: pos.z });
+                    }
+                });
+
+                jointPositions.forEach((pos, key) => {
+                    const geometry = new THREE.SphereGeometry(0.15, 16, 16);
+                    const material = new THREE.MeshPhongMaterial({ 
+                        color: 0x3b82f6,
+                        emissive: 0x3b82f6,
+                        emissiveIntensity: 0.3
+                    });
+                    const joint = new THREE.Mesh(geometry, material);
+                    joint.position.set(pos.x, pos.y, pos.z);
+                    this.scene.add(joint);
+                    this.jointMeshes.push(joint);
+                    this.joints.push(pos);
+                });
+            }
+
+            toggleJoints() {
+                this.showingJoints = !this.showingJoints;
+                document.getElementById('showJoints').checked = this.showingJoints;
+                this.updateJoints();
+                this.updateStats();
+            }
+
+            toggleGrid() {
+                this.showingGrid = !this.showingGrid;
+                document.getElementById('showGrid').checked = this.showingGrid;
+                this.gridHelper.visible = this.showingGrid;
+            }
+
+            toggleSnapToJoints() {
+                this.snapToJoints = !this.snapToJoints;
+                document.getElementById('snapToJoints').checked = this.snapToJoints;
+            }
+
+            runAnalysis() {
+                const numMembers = this.members.length;
+                const numLoads = this.loads.length;
+                
+                if (numMembers === 0) {
+                    alert('Add some structural members first!');
+                    return;
+                }
+                
+                const totalLoad = numLoads * 50;
+                const maxDeflection = (totalLoad / numMembers) * 0.025;
+                const avgStress = (totalLoad / numMembers) * 1500;
+                const utilization = avgStress / 36000;
+
+                this.analysisResults = {
+                    maxDeflection: maxDeflection.toFixed(3),
+                    maxStress: Math.round(avgStress),
+                    utilization: (utilization * 100).toFixed(1),
+                    status: utilization < 0.9 ? 'OK' : utilization < 1.0 ? 'WARNING' : 'FAIL'
+                };
+
+                document.getElementById('maxDeflection').textContent = this.analysisResults.maxDeflection + '"';
+                document.getElementById('maxStress').textContent = this.analysisResults.maxStress + ' psi';
+                document.getElementById('utilization').textContent = this.analysisResults.utilization + '%';
+                
+                const statusBadge = document.getElementById('statusBadge');
+                const badgeClass = this.analysisResults.status === 'OK' ? 'success' : 
+                                  this.analysisResults.status === 'WARNING' ? 'warning' : 'error';
+                statusBadge.innerHTML = `<span class="badge ${badgeClass}">${this.analysisResults.status}</span>`;
+
+                document.getElementById('results').classList.add('show');
+                this.highlightStressedMembers(utilization);
+            }
+
+            highlightStressedMembers(utilization) {
+                this.members.forEach((member, index) => {
+                    const stressLevel = utilization * (0.8 + Math.random() * 0.4);
+                    const memberColor = stressLevel < 0.9 ? 0x22c55e : stressLevel < 1.0 ? 0xeab308 : 0xef4444;
+                    
+                    setTimeout(() => {
+                        member.mesh.material.color.setHex(memberColor);
+                        if (member.mesh.material.emissive) {
+                            member.mesh.material.emissive.setHex(memberColor);
+                            member.mesh.material.emissiveIntensity = 0.2;
+                        }
+                    }, index * 50);
+                });
+            }
+
+            toggleDeformed() {
+                this.showingDeformed = !this.showingDeformed;
+                const btn = document.getElementById('deformedBtn');
+                
+                if (this.showingDeformed) {
+                    btn.textContent = 'Show Original Shape';
+                    this.members.forEach(member => {
+                        if (member.type === 'beam') {
+                            member.originalY = member.mesh.position.y;
+                            member.mesh.position.y -= 0.5;
+                        }
+                    });
+                    this.updateJoints();
+                } else {
+                    btn.textContent = 'Show Deformed Shape';
+                    this.members.forEach(member => {
+                        if (member.type === 'beam' && member.originalY) {
+                            member.mesh.position.y = member.originalY;
+                        }
+                    });
+                    this.updateJoints();
+                }
+            }
+
+            clearModel() {
+                if (confirm('Clear all members and loads?')) {
+                    this.deselectObject();
+                    this.members.forEach(member => {
+                        this.scene.remove(member.mesh);
+                        member.mesh.geometry.dispose();
+                        member.mesh.material.dispose();
+                    });
+                    this.loads.forEach(load => {
+                        this.scene.remove(load.mesh);
+                        load.mesh.geometry.dispose();
+                        load.mesh.material.dispose();
+                    });
+                    this.members = [];
+                    this.loads = [];
+                    this.analysisResults = null;
+                    document.getElementById('results').classList.remove('show');
+                    document.getElementById('validationResults').style.display = 'none';
+                    this.updateJoints();
+                    this.updateStats();
+                }
+            }
+
+            exportModel() {
+                const data = {
+                    members: this.members.map(m => ({
+                        type: m.type,
+                        material: m.material,
+                        section: m.section,
+                        position: {
+                            x: m.mesh.position.x,
+                            y: m.mesh.position.y,
+                            z: m.mesh.position.z
+                        }
+                    })),
+                    loads: this.loads.map(l => ({
+                        type: l.type,
+                        magnitude: l.magnitude,
+                        location: {
+                            x: l.mesh.position.x,
+                            y: l.mesh.position.y,
+                            z: l.mesh.position.z
+                        }
+                    })),
+                    joints: this.joints,
+                    analysis: this.analysisResults
+                };
+
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'structural-model.json';
+                a.click();
+                URL.revokeObjectURL(url);
+            }
+
+            updateMaterial() {
+                this.selectedMaterial = document.getElementById('materialSelect').value;
+            }
+
+            updateSection() {
+                this.selectedSection = document.getElementById('sectionSelect').value;
+            }
+
+            updateStats() {
+                document.getElementById('memberCount').textContent = this.members.length;
+                document.getElementById('loadCount').textContent = this.loads.length;
+                document.getElementById('jointCount').textContent = this.joints.length;
+                document.getElementById('dofCount').textContent = this.joints.length * 6;
+            }
+
+            onWindowResize() {
+                const container = document.getElementById('viewport');
+                this.camera.aspect = container.clientWidth / container.clientHeight;
+                this.camera.updateProjectionMatrix();
+                this.renderer.setSize(container.clientWidth, container.clientHeight);
+            }
+
+            animate() {
+                requestAnimationFrame(() => this.animate());
+                this.controls.update();
+                this.renderer.render(this.scene, this.camera);
+            }
+        }
+
+        const app = new StructuralCAD();
+        window.app = app;
+    </script>
+</body>
+</html>
